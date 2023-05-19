@@ -4,40 +4,78 @@ using UnityEngine;
 
 public class PlayerMovement : MonoBehaviour
 {
-    [SerializeField] private float speed = 5f;
+    public enum ControlType
+    {
+        Mouse,
+        WASD,
+        Both
+    }
+
+    public ControlType controlType = ControlType.Mouse;
+    public float speed = 5f;
+    public float shiftSpeedMultiplier = 2f;
+
     private Animator animator;
+    private bool isSprinting = false;
+    private Rigidbody2D rb;
+    private Vector2 moveDirection = Vector2.zero;
 
     private void Awake()
     {
         animator = GetComponent<Animator>();
+        rb = GetComponent<Rigidbody2D>();
+        rb.gravityScale = 0f;
     }
 
     private void Update()
     {
-        float moveHorizontal = Input.GetAxis("Horizontal");
-        float moveVertical = Input.GetAxis("Vertical");
-
-        Vector2 move = new Vector2(moveHorizontal, moveVertical);
-
-        if (move.magnitude > 0)
+        float moveSpeed = speed;
+        if (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift))
         {
-            transform.position += (Vector3)move * speed * Time.deltaTime;
-            animator.SetFloat("Speed", move.magnitude);
-            animator.SetFloat("Vertical", move.y);
-            animator.SetFloat("Horizontal", move.x);
+            moveSpeed *= shiftSpeedMultiplier;
+            isSprinting = true;
         }
-        else if (Input.GetMouseButton(0))
+        else
         {
-            Vector3 mousePos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
-            move = (mousePos - transform.position).normalized;
-            transform.position += (Vector3)move * speed * Time.deltaTime;
-            animator.SetFloat("Speed", speed);
-            animator.SetFloat("Vertical", move.y);
-            animator.SetFloat("Horizontal", move.x);
+            isSprinting = false;
+        }
+
+        float horizontalInput = Input.GetAxis("Horizontal");
+        float verticalInput = Input.GetAxis("Vertical");
+
+        moveDirection = Vector2.zero;
+
+        if (controlType == ControlType.Mouse || controlType == ControlType.Both)
+        {
+            if (Input.GetMouseButton(1))
+            {
+                Vector3 mousePosition = Input.mousePosition;
+                mousePosition = Camera.main.ScreenToWorldPoint(new Vector3(mousePosition.x, mousePosition.y, transform.position.z));
+                moveDirection = mousePosition - transform.position;
+                moveDirection.Normalize();
+            }
+        }
+
+        if (controlType == ControlType.WASD || controlType == ControlType.Both)
+        {
+            moveDirection += new Vector2(horizontalInput, verticalInput);
+            moveDirection.Normalize();
+        }
+
+        if (moveDirection.magnitude > 0)
+        {
+            animator.SetFloat("Speed", moveDirection.magnitude);
+            animator.SetFloat("Vertical", moveDirection.y);
+            animator.SetFloat("Horizontal", moveDirection.x);
         }
         else
         {
             animator.SetFloat("Speed", 0);
         }
+    }
+
+    private void FixedUpdate()
+    {
+        rb.MovePosition(rb.position + moveDirection * speed * Time.fixedDeltaTime * (isSprinting ? shiftSpeedMultiplier : 1f));
     }
 }

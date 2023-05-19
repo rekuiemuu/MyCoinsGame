@@ -5,6 +5,9 @@ using UnityEngine;
 public class MyCoinTrigger : MonoBehaviour
 {
     [SerializeField] private string _coinType;
+    public GameObject tooltipPrefab; // Префаб подсказки
+
+    private GameObject tooltip; // Ссылка на текущий экземпляр подсказки
 
     void OnTriggerEnter2D(Collider2D other)
     {
@@ -17,8 +20,27 @@ public class MyCoinTrigger : MonoBehaviour
                     Destroy(gameObject);
                     break;
                 case "BigCoin":
-                    // Ничего
+                    if (tooltip == null)
+                    {
+                        tooltip = Instantiate(tooltipPrefab, transform.position, Quaternion.identity);
+                        tooltip.transform.SetParent(transform); // Привязываем подсказку к монетке
+
+                        // Позиционируем подсказку выше монетки
+                        tooltip.transform.localPosition = new Vector3(0f, 0.5f, 0f);
+                    }
                     break;
+            }
+        }
+    }
+
+    void OnTriggerExit2D(Collider2D other)
+    {
+        if (other.gameObject.name == "Player")
+        {
+            if (tooltip != null)
+            {
+                Destroy(tooltip);
+                tooltip = null;
             }
         }
     }
@@ -34,6 +56,12 @@ public class MyCoinTrigger : MonoBehaviour
                     {
                         ScoreManager.Instance.addScore(2);
                         Destroy(gameObject);
+
+                        if (tooltip != null)
+                        {
+                            Destroy(tooltip);
+                            tooltip = null;
+                        }
                     }
                     break;
                 case "SmallCoin":
